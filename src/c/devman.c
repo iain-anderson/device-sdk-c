@@ -20,6 +20,33 @@
 
 /* Device (collection) management functions */
 
+void devsdk_free_resources (devsdk_device_resources *r)
+{
+  while (r)
+  {
+    free ((char *)r->request->resname);
+    devsdk_nvpairs_free ((devsdk_nvpairs *)r->request->attributes);
+    iot_typecode_free ((iot_typecode_t *)r->request->type);
+    free ((devsdk_commandrequest *)r->request);
+    devsdk_device_resources *nextr = r->next;
+    free (r);
+    r = nextr;
+  }
+}
+
+void devsdk_free_devices (devsdk_devices *d)
+{
+  while (d)
+  {
+    free ((char *)d->devname);
+    devsdk_free_resources (d->resources);
+    devsdk_protocols_free ((devsdk_protocols *)d->protocols);
+    devsdk_devices *nextd = d->next;
+    free (d);
+    d = nextd;
+  }
+}
+
 char * edgex_add_device
 (
   devsdk_service_t *svc,
@@ -73,6 +100,11 @@ char * edgex_add_device
       (svc->logger, "Failed to add Device in core-metadata: %s", err->reason);
   }
   return result;
+}
+
+devsdk_devices *devsdk_get_devices (devsdk_service_t *svc)
+{
+  return edgex_devmap_copydevices_generic (svc->devices);
 }
 
 edgex_device * edgex_devices (devsdk_service_t *svc)
