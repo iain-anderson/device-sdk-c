@@ -13,6 +13,7 @@
 #include "parson.h"
 #include "cmdinfo.h"
 #include "rest-server.h"
+#include "iot/threadpool.h"
 
 typedef struct edgex_reading
 {
@@ -89,9 +90,18 @@ edgex_event_cooked *edgex_data_process_event
   bool doTransforms
 );
 
-void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *eventval);
+typedef struct edgex_data_client_t edgex_data_client_t;
+typedef struct edgex_device_service_endpoint edgex_device_service_endpoint;
 
-void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *eventval);
+edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endpoint *e, iot_logger_t *lc, iot_threadpool_t *queue, bool v2);
+
+// edgex_data_client_t *edgex_data_client_new_mq (...);
+
+void edgex_data_client_free (edgex_data_client_t *client);
+
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *eventval);
+
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *eventval);
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
 (

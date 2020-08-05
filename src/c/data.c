@@ -18,11 +18,95 @@
 #include <cbor.h>
 #include <microhttpd.h>
 
-typedef struct postparams
+typedef struct edc_postparams
 {
-  devsdk_service_t *svc;
+  edgex_data_client_t *client;
   edgex_event_cooked *event;
-} postparams;
+} edc_postparams;
+
+typedef void (*edc_freefn) (iot_logger_t *lc, void *address);
+typedef void (*edc_postfn) (iot_logger_t *lc, void *address, edgex_event_cooked *event);
+
+typedef struct edgex_data_client_t
+{
+  void *address;
+  iot_logger_t *lc;
+  iot_threadpool_t *queue;
+  edc_postfn pf;
+  edc_freefn ff;
+} edgex_data_client_t;
+
+static void *edc_postjob (void *p)
+{
+  edc_postparams *pp = (edc_postparams *)p;
+  pp->client->pf (pp->client->lc, pp->client->address, pp->event);
+  free (pp);
+  return NULL;
+}
+
+static void edc_rest_freefn (iot_logger_t *lc, void *address)
+{
+  free (address);
+}
+
+static void edc_rest_postfn (iot_logger_t *lc, void *address, edgex_event_cooked *event)
+{
+  edgex_ctx ctx;
+  devsdk_error err = EDGEX_OK;
+  const char *url = (const char *)address;
+  memset (&ctx, 0, sizeof (edgex_ctx));
+
+  switch (event->encoding)
+  {
+    case JSON:
+    {
+      edgex_http_post (lc, &ctx, url, event->value.json, NULL, &err);
+      break;
+    }
+    case CBOR:
+    {
+      edgex_http_postbin (lc, &ctx, url, event->value.cbor.data, event->value.cbor.length, CONTENT_CBOR, NULL, &err);
+      break;
+    }
+  }
+  edgex_event_cooked_free (event);
+}
+
+edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endpoint *e, iot_logger_t *lc, iot_threadpool_t *queue, bool v2)
+{
+  edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
+  result->lc = lc;
+  result->queue = queue;
+  result->pf = edc_rest_postfn;
+  result->ff = edc_rest_freefn;
+  char *url = malloc (URL_BUF_SIZE);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/%s/event", e->host, e->port, v2 ? "v2" : "v1");
+  result->address = url;
+  return result;
+}
+
+void edgex_data_client_free (edgex_data_client_t *client)
+{
+  if (client)
+  {
+    client->ff (client->lc, client->address);
+    free (client);
+  }
+}
+
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *eventval)
+{
+  edc_postparams *pp = malloc (sizeof (edc_postparams));
+  pp->client = client;
+  pp->event = eventval;
+  iot_threadpool_add_work (client->queue, edc_postjob, pp, -1);
+}
+
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *eventval)
+{
+  client->pf (client->lc, client->address, eventval);
+}
+
 
 static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
 {
@@ -319,58 +403,6 @@ edgex_event_cooked *edgex_data_process_event
     json_value_free (jevent);
   }
   return result;
-}
-
-static void *edgex_data_post (void *p)
-{
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-  postparams *pp = (postparams *) p;
-  devsdk_error err = EDGEX_OK;
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/event",
-    pp->svc->config.endpoints.data.host,
-    pp->svc->config.endpoints.data.port
-  );
-
-  switch (pp->event->encoding)
-  {
-    case JSON:
-    {
-      edgex_http_post (pp->svc->logger, &ctx, url, pp->event->value.json, NULL, &err);
-      break;
-    }
-    case CBOR:
-    {
-      edgex_http_postbin
-        (pp->svc->logger, &ctx, url, pp->event->value.cbor.data, pp->event->value.cbor.length, CONTENT_CBOR, NULL, &err);
-      break;
-    }
-  }
-  edgex_event_cooked_free (pp->event);
-  free (pp);
-  return NULL;
-}
-
-void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *ev)
-{
-  postparams *pp = malloc (sizeof (postparams));
-  pp->svc = svc;
-  pp->event = ev;
-  iot_threadpool_add_work (svc->eventq, edgex_data_post, pp, -1);
-}
-
-void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *ev)
-{
-  postparams *pp = malloc (sizeof (postparams));
-  pp->svc = svc;
-  pp->event = ev;
-  edgex_data_post (pp);
 }
 
 void edgex_event_cooked_add_ref (edgex_event_cooked *e)
