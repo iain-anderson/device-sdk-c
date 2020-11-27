@@ -1,6 +1,6 @@
 ### SDK API v2
 
-Version 1.2 of the SDK introduces v2 of the API. Both versions will be usable until the release of version 2.0, currently expected to be the EdgeX Hanoi release.
+Version 1.2 of the SDK introduced v2 of the API. In version 2.0 (the EdgeX Ireland release) the v1 API is no longer available.
 
 #### Using the v2 API
 

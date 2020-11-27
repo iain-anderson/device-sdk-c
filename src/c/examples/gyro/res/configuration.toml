@@ -1,3 +1,6 @@
+[Writable]
+  LogLevel = 'DEBUG'
+
 [Service]
   Port = 49999
   Timeout = 5000
@@ -20,9 +23,6 @@
   Discovery = false
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-
-[Logging]
-  LogLevel = 'DEBUG'
 
 [[DeviceList]]
   Name = 'Gyro'
