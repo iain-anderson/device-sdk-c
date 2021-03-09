@@ -22,6 +22,7 @@
 #include "edgex-rest.h"
 #include "iot/time.h"
 #include "iot/iot.h"
+#include "filesys.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -300,6 +301,21 @@ static bool ping_client
   return false;
 }
 
+static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *err)
+{
+  devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "json");
+  iot_log_info (svc->logger, "Processing Devices from %s", svc->config.device.devicesdir);
+  for (devsdk_strings *f = filenames; f; f = f->next)
+  {
+    edgex_metadata_client_add_device_file (svc->logger, &svc->config.endpoints, f->str, svc->devices, svc->name, err);
+    if (err->code)
+    {
+      break;
+    }
+  }
+  devsdk_strings_free (filenames);
+}
+
 static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk_error *err)
 {
   svc->adminstate = UNLOCKED;
@@ -433,12 +449,11 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
 
-  /* Add Devices from configuration */
+  /* Load Devices from files and register in metadata */
 
-  if (config)
+  if (strlen (svc->config.device.devicesdir))
   {
-    edgex_device_process_configured_devices
-      (svc, toml_array_in (config, "DeviceList"), err);
+    edgex_device_devices_upload (svc, err);
     if (err->code)
     {
       return;

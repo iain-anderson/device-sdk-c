@@ -888,7 +888,7 @@ edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char
   return result;
 }
 
-static JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
+JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
 {
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);

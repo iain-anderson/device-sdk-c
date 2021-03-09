@@ -1,0 +1,9 @@
+{
+  "Name": "Counter2",
+  "ProfileName": "Example-Counter",
+  "Description": "Another Example Counting Device",
+  "Protocols":
+  {
+     "Counter": { "Index": "58" }
+  }
+}

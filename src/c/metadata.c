@@ -324,6 +324,73 @@ char *edgex_metadata_client_add_device
   return result;
 }
 
+void edgex_metadata_client_add_device_file
+  (iot_logger_t *lc, edgex_service_endpoints *endpoints, const char *fname, edgex_devmap_t *devs, const char *svcname, devsdk_error *err)
+{
+  JSON_Value *jval = json_parse_file (fname);
+  if (jval)
+  {
+    JSON_Object *jobj = json_value_get_object (jval);
+    if (jobj)
+    {
+      const char *dname = json_object_get_string (jobj, "Name");
+      if (dname)
+      {
+        if (!edgex_devmap_device_exists (devs, dname))
+        {
+          json_object_set_string (jobj, "ServiceName", svcname);
+          if (!json_object_get_string (jobj, "AdminState"))
+          {
+            json_object_set_string (jobj, "AdminState", "UNLOCKED");
+          }
+          if (!json_object_get_string (jobj, "OperatingState"))
+          {
+            json_object_set_string (jobj, "OperatingState", "UP");
+          }
+          if (!json_object_get_string (jobj, "ApiVersion"))
+          {
+            json_object_set_string (jobj, "ApiVersion", "2");
+          }
+          JSON_Value *reqval = edgex_wrap_request ("Device", jval);
+          char *json = json_serialize_to_string (reqval);
+          edgex_ctx ctx;
+          *err = EDGEX_OK;
+          char url[URL_BUF_SIZE];
+
+          memset (&ctx, 0, sizeof (edgex_ctx));
+
+          snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+          edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+          if (err->code == 0)
+          {
+            char *id = edgex_id_from_response (ctx.buff);
+            iot_log_info (lc, "Device %s created with id %s", dname, id);
+            free (id);
+          }
+          else
+          {
+            iot_log_info (lc, "edgex_metadata_client_add_device_file: %s: %s", err->reason, ctx.buff);
+          }
+          json_value_free (reqval);
+          jval = NULL;
+          free (ctx.buff);
+          json_free_serialized_string (json);
+        }
+        else
+        {
+          iot_log_info (lc, "Device %s already exists: skipped", dname);
+        }
+      }
+    }
+    json_value_free (jval);
+  }
+  else
+  {
+    iot_log_error (lc, "File %s does not parse as JSON", fname);
+    *err = EDGEX_CONF_PARSE_ERROR;
+  }
+}
+
 void edgex_metadata_client_add_or_modify_device
 (
   iot_logger_t *lc,
