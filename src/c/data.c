@@ -137,6 +137,7 @@ Event:
   origin: Timestamp (filled in by the SDK)
   deviceName: String (name of the Device)
   profileName: String (name of the Profile)
+  sourceName: String (name of the deviceResource or deviceCommand)
   tags: Array of Strings (may be added to at any stage)
   readings: Array of Readings
 */
@@ -330,11 +331,13 @@ edgex_event_cooked *edgex_data_process_event
     json_object_set_string (jobj, "id", eventId);
     json_object_set_string (jobj, "deviceName", device_name);
     json_object_set_string (jobj, "profileName", commandinfo->profile->name);
+    json_object_set_string (jobj, "sourceName", commandinfo->name);
     json_object_set_uint (jobj, "origin", timenow);
     json_object_set_value (jobj, "readings", arrval);
     result->encoding = JSON;
-    result->value.json = json_serialize_to_string (jevent);
-    json_value_free (jevent);
+    JSON_Value *reqval = edgex_wrap_request_single ("Event", jevent);
+    result->value.json = json_serialize_to_string (reqval);
+    json_value_free (reqval);
   }
   free (eventId);
   return result;
