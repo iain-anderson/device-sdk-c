@@ -198,7 +198,7 @@ edgex_event_cooked *edgex_data_process_event
   if (useCBOR)
   {
     size_t bsize = 0;
-    cbor_item_t *cevent = cbor_new_definite_map (6);
+    cbor_item_t *cevent = cbor_new_definite_map (7);
     cbor_item_t *crdgs = cbor_new_definite_array (commandinfo->nreqs);
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
@@ -286,13 +286,21 @@ edgex_event_cooked *edgex_data_process_event
     cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("profileName")), .value = cbor_move (cbor_build_string (commandinfo->profile->name)) });
     cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("sourceName")), .value = cbor_move (cbor_build_string (commandinfo->name)) });
+    cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("origin")), .value = cbor_move (cbor_build_uint64 (timenow)) });
     cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("readings")), .value = cbor_move (crdgs) });
 
+    cbor_item_t *cwrapper = cbor_new_definite_map (2);
+    cbor_map_add (cwrapper, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("apiVersion")), .value = cbor_move (cbor_build_string (EDGEX_API_VERSION)) });
+    cbor_map_add (cwrapper, (struct cbor_pair)
+     { .key = cbor_move (cbor_build_string ("Event")), .value = cbor_move (cevent) });
+
     result->encoding = CBOR;
-    result->value.cbor.length = cbor_serialize_alloc (cevent, &result->value.cbor.data, &bsize);
-    cbor_decref (&cevent);
+    result->value.cbor.length = cbor_serialize_alloc (cwrapper, &result->value.cbor.data, &bsize);
+    cbor_decref (&cwrapper);
   }
   else
   {
