@@ -15,6 +15,8 @@
 #include "rest-server.h"
 #include "iot/threadpool.h"
 
+#define EX_MQ_TYPE "MessageQueue/Type"
+
 typedef enum { JSON, CBOR} edgex_event_encoding;
 
 typedef struct edgex_event_cooked
