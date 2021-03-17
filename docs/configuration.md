@@ -8,15 +8,11 @@ If the Registry is in use, configuration is contained in subfolders of `edgex/co
 
 When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry.
 
-The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service first looks for an environment variable whose name is of the form
-
-`<service-name>_<section-name>_<config-element>`
-
-and if that is not present, then tries
+The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service looks for an environment variable whose name is of the form
 
 `<section-name>_<config-element>`
 
-For example, `device-template_Device_MaxCmdOps` or `Logging_LogLevel`.
+For example, `Service_ServerBindAddr`.
 
 ## Service section
 
@@ -79,3 +75,34 @@ EventQLength | Int | Sets the maximum number of events to be queued for transmis
 ## Driver section
 
 This section is for driver-specific options. Any configuration specified here will be passed to the driver implementation during initialization.
+
+## MessageQueue section
+
+Option | Type | Notes
+:--- | :--- | :---
+Type | String | If this option is present and set to `mqtt`, the service will deliver events via the MQTT Message Bus rather than by making REST calls to the core-data service.
+
+The following basic options may be configured for MQTT connections:
+
+Option | Type | Notes
+:--- | :--- | :---
+Protocol | String | The MQTT protocol to use, `tcp` or `ssl`. Defaults to `tcp`.
+Host | String | The host on which the MQTT server is running. Defaults to `localhost`.
+Port | Unsigned Int | The port on which the MQTT server is running. Defaults to `1883`.
+Topic | String | The topic under which events are to be published. Defaults to `edgex/events` which results in events being published to `edgex/events/profile-name/device-name/source-name`.
+
+### MessageQueue/Optional section
+
+The following options are unset by default but may be required in some applications, eg if ssl is to be used:
+
+Option | Type | Notes
+:--- | :--- | :---
+Username | String |
+Password | String |
+ClientId | String |
+Qos | Unsigned Int | Available Qos values are 0 (default) ("fire and forget"), 1 ("at least once") or 2 ("exactly once").
+KeepAlive | Unsigned Int | Measured in seconds. Defaults to 60.
+Retained | Boolean | defaults to false, event messages are not retained on the MQTT server.
+SkipCertVerify | Boolean | defaults to false, ie certificates are verified.
+CertFile | String | Filename of a PEM-format file containing trusted certificates.
+KeyFile | String | Filename of a PEM-format file containing the client's key and certificate chain.
