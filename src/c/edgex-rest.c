@@ -1239,6 +1239,14 @@ static edgex_watcher *watcher_read (const JSON_Object *obj)
   {
     result->blocking_identifiers = blocklist_read (blockObj);
   }
+  JSON_Array *aearray = json_object_get_array (obj, "autoEvents");
+  size_t count = json_array_get_count (aearray);
+  for (size_t i = 0; i < count; i++)
+  {
+    edgex_device_autoevents *temp = autoevent_read (json_array_get_object (aearray, i));
+    temp->next = result->autoevents;
+    result->autoevents = temp;
+  }
   result->adminstate = edgex_adminstate_fromstring
     (json_object_get_string (obj, "adminState"));
 
@@ -1302,6 +1310,7 @@ edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
   res->name = strdup (e->name);
   res->identifiers = devsdk_nvpairs_dup (e->identifiers);
   res->blocking_identifiers = edgex_blocklist_dup (e->blocking_identifiers);
+  res->autoevents = autoevents_dup (e->autoevents);
   res->profile = strdup (e->profile);
   res->adminstate = e->adminstate;
   res->next = NULL;
@@ -1318,6 +1327,7 @@ void edgex_watcher_free (edgex_watcher *e)
     devsdk_nvpairs_free (ew->identifiers);
     edgex_watcher_regexes_free (ew->regs);
     edgex_blocklist_free (ew->blocking_identifiers);
+    edgex_device_autoevents_free (ew->autoevents);
     free (ew->profile);
     free (ew);
     ew = next;

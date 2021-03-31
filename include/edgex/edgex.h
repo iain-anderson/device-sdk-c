@@ -113,6 +113,7 @@ typedef struct edgex_watcher
   edgex_blocklist *blocking_identifiers;
   char *profile;
   edgex_device_adminstate adminstate;
+  struct edgex_device_autoevents *autoevents;
   struct edgex_watcher *next;
 } edgex_watcher;
 
