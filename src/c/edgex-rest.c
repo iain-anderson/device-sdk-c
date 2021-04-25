@@ -117,17 +117,21 @@ static JSON_Value *nvpairs_write (const devsdk_nvpairs *e)
   return result;
 }
 
-static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
+char *devsdk_nvpairs_write (const devsdk_nvpairs *e)
+{
+  JSON_Value *val = nvpairs_write (e);
+  char *result = json_serialize_to_string (val);
+  json_value_free (val);
+  return result;
+}
+
+devsdk_nvpairs *devsdk_nvpairs_read (const JSON_Object *obj)
 {
   devsdk_nvpairs *result = NULL;
   size_t count = json_object_get_count (obj);
   for (size_t i = 0; i < count; i++)
   {
-    devsdk_nvpairs *nv = malloc (sizeof (devsdk_nvpairs));
-    nv->name = strdup (json_object_get_name (obj, i));
-    nv->value = strdup (json_value_get_string (json_object_get_value_at (obj, i)));
-    nv->next = result;
-    result = nv;
+    result = devsdk_nvpairs_new (json_object_get_name (obj, i), json_string (json_object_get_value_at (obj, i)), result);
   }
   return result;
 }
@@ -383,7 +387,7 @@ static edgex_deviceresource *deviceresource_read
     result->tag = get_string (obj, "tag");
     result->properties = pv;
     attributes_obj = json_object_get_object (obj, "attributes");
-    result->attributes = nvpairs_read (attributes_obj);
+    result->attributes = devsdk_nvpairs_read (attributes_obj);
     result->next = NULL;
   }
   else
@@ -432,7 +436,7 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   result->deviceResource = get_string (obj, "deviceResource");
   result->defaultValue = get_string (obj, "defaultValue");
   mappings_obj = json_object_get_object (obj, "mappings");
-  result->mappings = nvpairs_read (mappings_obj);
+  result->mappings = devsdk_nvpairs_read (mappings_obj);
   result->next = NULL;
   return result;
 }
@@ -692,7 +696,7 @@ static devsdk_protocols *protocols_read (const JSON_Object *obj)
     JSON_Value *pval = json_object_get_value_at (obj, i);
     devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
     prot->name = strdup (json_object_get_name (obj, i));
-    prot->properties = nvpairs_read (json_value_get_object (pval));
+    prot->properties = devsdk_nvpairs_read (json_value_get_object (pval));
     prot->next = result;
     result = prot;
   }
@@ -1232,7 +1236,7 @@ static edgex_watcher *watcher_read (const JSON_Object *obj)
   JSON_Object *idobj = json_object_get_object (obj, "identifiers");
   if (idobj)
   {
-    result->identifiers = nvpairs_read (idobj);
+    result->identifiers = devsdk_nvpairs_read (idobj);
   }
   JSON_Object *blockObj = json_object_get_object (obj, "blockingIdentifiers");
   if (blockObj)
