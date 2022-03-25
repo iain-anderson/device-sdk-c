@@ -1455,6 +1455,16 @@ static void value_write (JSON_Value *val, devsdk_http_reply *reply)
   reply->content_type = CONTENT_JSON;
 }
 
+static void data_write (iot_data_t *d, devsdk_http_reply *reply)
+{
+  char *result = iot_data_to_json (d);
+  iot_data_free (d);
+  reply->data.bytes = result;
+  reply->data.size = strlen (result);
+  reply->code = MHD_HTTP_OK;
+  reply->content_type = CONTENT_JSON;
+}
+
 static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
 {
   JSON_Value *result = json_value_init_object ();
@@ -1465,6 +1475,19 @@ static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
   if (br->message)
   {
     json_object_set_string (obj, "message", br->message);
+  }
+  return result;
+}
+
+static iot_data_t *baseresponse_todata (const edgex_baseresponse *br)
+{
+  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (result, "apiVersion", iot_data_alloc_string (br->apiVersion, IOT_DATA_REF));
+  iot_data_string_map_add (result, "requestId", iot_data_alloc_string (br->requestId, IOT_DATA_REF));
+  iot_data_string_map_add (result, "statusCode", iot_data_alloc_ui64 (br->statusCode));
+  if (br->message)
+  {
+    iot_data_string_map_add (result, "message", iot_data_alloc_string (br->message, IOT_DATA_REF));
   }
   return result;
 }
@@ -1541,23 +1564,23 @@ void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *
   value_write (val, reply);
 }
 
-static JSON_Value *configresponse_write (const edgex_configresponse *cr)
+static iot_data_t *configresponse_todata (const edgex_configresponse *cr)
 {
-  JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)cr);
-  JSON_Object *obj = json_value_get_object (result);
-  json_object_set_value (obj, "config", cr->config);
-  json_object_set_string (obj, "serviceName", cr->svcname);
+  iot_data_t *result = baseresponse_todata ((const edgex_baseresponse *)cr);
+  iot_data_string_map_add (result, "config", iot_data_add_ref (cr->config));
+  iot_data_string_map_add (result, "serviceName", iot_data_alloc_string (cr->svcname, IOT_DATA_REF));
   return result;
 }
 
 void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_reply *reply)
 {
-  JSON_Value *val = configresponse_write (cr);
-  value_write (val, reply);
+  iot_data_t *d = configresponse_todata (cr);
+  data_write (d, reply);
 }
 
 void edgex_configresponse_free (edgex_configresponse *cr)
 {
+  iot_data_free (cr->config);
   free (cr);
 }
 

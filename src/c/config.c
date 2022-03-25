@@ -687,116 +687,13 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   edgex_map_deinit (&svc->config.watchers);
 }
 
-static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
-{
-  JSON_Value *val = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (val);
-
-  JSON_Value *wval = json_value_init_object ();
-  JSON_Object *wobj = json_value_get_object (wval);
-  json_object_set_string (wobj, "LogLevel", edgex_logger_levelname (svc->config.loglevel));
-
-  JSON_Value *dval = json_value_init_object ();
-  JSON_Object *dobj = json_value_get_object (dval);
-
-  JSON_Value *ddval = json_value_init_object ();
-  JSON_Object *ddobj = json_value_get_object (ddval);
-  json_object_set_boolean (ddobj, "Enabled", svc->config.device.discovery_enabled);
-  json_object_set_uint (ddobj, "Interval", svc->config.device.discovery_interval);
-  json_object_set_value (dobj, "Discovery", ddval);
-
-  json_object_set_boolean
-    (dobj, "DataTransform", svc->config.device.datatransform);
-  json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
-  json_object_set_uint
-    (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
-  json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
-  json_object_set_string (dobj, "DevicesDir", svc->config.device.devicesdir);
-  json_object_set_boolean
-    (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
-  json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
-  json_object_set_boolean (dobj, "UseMessageBus", iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false));
-
-  JSON_Value *lval = json_value_init_array ();
-  JSON_Array *larr = json_value_get_array (lval);
-  for (int i = 0; svc->config.service.labels[i]; i++)
-  {
-    json_array_append_string (larr, svc->config.service.labels[i]);
-  }
-  json_object_set_value (dobj, "Labels", lval);
-  json_object_set_value (wobj, "Device", dval);
-
-  json_object_set_value (obj, DYN_NAME, wval);
-
-  const char *mqtype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
-  if (strcmp (mqtype, "mqtt") == 0)
-  {
-    JSON_Value *mqval = edgex_mqtt_config_json (svc->config.sdkconf);
-    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
-    json_object_set_value (obj, "MessageQueue", mqval);
-  }
-  else if (strcmp (mqtype, "redis") == 0)
-  {
-    JSON_Value *mqval = edgex_redstr_config_json (svc->config.sdkconf);
-    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
-    json_object_set_value (obj, "MessageQueue", mqval);
-  }
-
-  JSON_Value *cval = json_value_init_object ();
-  JSON_Object *cobj = json_value_get_object (cval);
-
-  JSON_Value *mval = json_value_init_object ();
-  JSON_Object *mobj = json_value_get_object (mval);
-  json_object_set_string (mobj, "Host", svc->config.endpoints.metadata.host);
-  json_object_set_uint (mobj, "Port", svc->config.endpoints.metadata.port);
-  json_object_set_value (cobj, "Metadata", mval);
-
-  dval = json_value_init_object ();
-  dobj = json_value_get_object (dval);
-  json_object_set_string (dobj, "Host", svc->config.endpoints.data.host);
-  json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
-  json_object_set_value (cobj, "Data", dval);
-
-  json_object_set_value (obj, "Clients", cval);
-
-  JSON_Value *sval = json_value_init_object ();
-  JSON_Object *sobj = json_value_get_object (sval);
-  json_object_set_string (sobj, "Host", svc->config.service.host);
-  json_object_set_uint (sobj, "Port", svc->config.service.port);
-
-  json_object_set_string (sobj, "RequestTimeout", iot_data_string_map_get_string (svc->config.sdkconf, "Service/RequestTimeout"));
-  json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
-  json_object_set_string
-    (sobj, "HealthCheckInterval", svc->config.service.checkinterval);
-  json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
-  json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
-
-
-  json_object_set_value (obj, "Service", sval);
-
-  if (svc->config.driverconf)
-  {
-    iot_data_map_iter_t iter;
-    iot_data_map_iter (svc->config.driverconf, &iter);
-    dval = json_value_init_object ();
-    dobj = json_value_get_object (dval);
-    while (iot_data_map_iter_next (&iter))
-    {
-      json_object_set_string (dobj, iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
-    }
-    json_object_set_value (obj, DRV_NAME, dval);
-  }
-
-  return val;
-}
-
 void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *)ctx;
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
 
   edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", MHD_HTTP_OK, NULL);
-  cr->config = edgex_device_config_toJson ((devsdk_service_t *)ctx);
+  cr->config = iot_data_add_ref (((devsdk_service_t *)ctx)->config.sdkconf);
   cr->svcname = svc->name;
 
   edgex_configresponse_write (cr, reply);

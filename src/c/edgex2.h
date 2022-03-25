@@ -40,7 +40,7 @@ typedef struct
 {
   edgex_baseresponse base;
   const char *svcname;
-  JSON_Value *config;
+  iot_data_t *config;
 } edgex_configresponse;
 
 typedef struct
