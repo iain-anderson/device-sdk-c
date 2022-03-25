@@ -69,12 +69,20 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Service/HealthCheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/EnableCORS", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowCredentials", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedOrigin", iot_data_alloc_string ("https://localhost", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedMethods", iot_data_alloc_string ("GET, POST, PUT, PATCH, DELETE", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedHeaders", iot_data_alloc_string ("Authorization, Accept, Accept-Language, Content-Language, Content-Type, X-Correlation-ID", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSExposeHeaders", iot_data_alloc_string ("Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified, Pragma, X-Correlation-ID", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSMaxAge", iot_data_alloc_ui32 (3600));
 
   iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/UseMessageBus", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
+
 
   iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
   edgex_mqtt_config_defaults (result);
