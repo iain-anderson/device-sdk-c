@@ -156,6 +156,15 @@ static void vault_set (void *impl, const char *path, const iot_data_t *secrets)
   free (ctx.buff);
 }
 
+static devsdk_nvpairs *vault_getregtoken (void *impl)
+{
+  char *tok = NULL;
+/*
+  /v1/consul/creds/<service-name> gives { "data" : { "token" : "<tok>" } }
+*/
+  return tok ? devsdk_nvpairs_new ("X-Consul-Token", tok, NULL) : NULL;
+}
+
 static void vault_fini (void *impl)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
@@ -170,4 +179,4 @@ void *edgex_secrets_vault_alloc ()
   return calloc (1, sizeof (vault_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_fini };
+const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_fini };

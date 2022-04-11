@@ -93,6 +93,11 @@ static void insecure_set (void *impl, const char *path, const iot_data_t *secret
   iot_log_error (insec->lc, "Storing secrets is not supported when running in insecure mode");
 }
 
+static devsdk_nvpairs *insecure_getregtoken (void *impl)
+{
+  return NULL;
+}
+
 static void insecure_fini (void *impl)
 {
   insecure_impl_t *insec = (insecure_impl_t *)impl;
@@ -106,4 +111,4 @@ void *edgex_secrets_insecure_alloc ()
   return calloc (1, sizeof (insecure_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_fini };
+const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_fini };

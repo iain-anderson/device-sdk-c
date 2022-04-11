@@ -52,6 +52,11 @@ static void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, co
   sp->fns.set (sp->impl, path, secrets);
 }
 
+devsdk_nvpairs *edgex_secrets_getregtoken (edgex_secret_provider_t *sp)
+{
+  return sp->fns.getregtoken (sp->impl);
+}
+
 void edgex_secrets_fini (edgex_secret_provider_t *sp)
 {
   if (sp)
